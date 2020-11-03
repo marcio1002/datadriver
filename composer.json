@@ -2,7 +2,8 @@
     "name": "marcio/datadriver",
     "description": "Um componente simples para implementação de conexões com drivers SGBD",
     "type": "cocomposer-plugin",
-    "license": "Alladin",
+    "version": "1.0.0",
+    "license": "Aladdin",
     "authors": [
         {
             "name": "marcio1002",
