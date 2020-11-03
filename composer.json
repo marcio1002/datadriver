@@ -1,0 +1,24 @@
+{
+    "name": "marcio/datadriver",
+    "description": "Um componente simples para implementação de conexões com drivers SGBD",
+    "type": "cocomposer-plugin",
+    "license": "Alladin",
+    "authors": [
+        {
+            "name": "marcio1002",
+            "email": "marcioalemao1999@yahoo.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Datadriver\\" : "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Datadriver\\Test\\" : "tests/"
+        },
+        "files": ["src/config.php"]
+    },
+    "require": {}
+}
