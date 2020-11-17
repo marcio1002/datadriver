@@ -1,6 +1,6 @@
 <?php
 
-namespace Datadriver\Traits;
+namespace Datadriver\Helpers\Traits;
 
 use PDO,PDOException, Exception;
 

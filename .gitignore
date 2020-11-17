@@ -1,2 +1,4 @@
 /src/config.php
 .vscode
+/vendor/
+/tests/
