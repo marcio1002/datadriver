@@ -36,11 +36,11 @@ trait DataClause
   public function whereIn(string $column, ...$values): self
   {
     if ($values[0]  instanceof DataDriver) {
-      $values[0] = $this->__toString();
+      $values[0] = $this->toString();
       static::$subQuery = "";
-    }else {
+    } else {
       $this->setCollection($values);
-      $values = array_fill(0,count($values),"?");
+      $values = array_fill(0, count($values), "?");
     }
 
     $val = (!empty(static::$subQuery)) ? "subQuery" : "query";
@@ -62,11 +62,11 @@ trait DataClause
   public function whereNotIn(string $column, ...$values): self
   {
     if ($values[0]  instanceof DataDriver) {
-      $values[0] = $this->__toString();
+      $values[0] = $this->toString();
       static::$subQuery = "";
-    }else {
+    } else {
       $this->setCollection($values);
-      $values = array_fill(0,count($values),"?");
+      $values = array_fill(0, count($values), "?");
     }
 
     $val = (!empty(static::$subQuery)) ? "subQuery" : "query";
@@ -93,7 +93,9 @@ trait DataClause
       $expression = $this->toString();
       static::$subQuery = "";
     } else {
-      $this->setCollection([array_pop($expression)]);
+      if (count($condition) > 3) throw new Exception("Expected a maximum of 3 parameters");
+
+      $this->setCollection($expression[2]);
       $expression[2] = "?";
       $expression =  join(" ", $expression);
     }
@@ -103,6 +105,8 @@ trait DataClause
       $expression2 = $this->toString();
       static::$subQuery = "";
     } else {
+      if (count($condition) > 3) throw new Exception("Expected a maximum of 3 parameters");
+
       $this->setCollection([array_pop($expression2)]);
       $expression2[2] = "?";
       $expression2 =  join(" ", $expression2);
@@ -121,14 +125,19 @@ trait DataClause
 
   /**
    * @param array|string $table
-   * @param string|\DataDriver\DataDriver $condition
+   * @param array|\DataDriver\DataDriver $condition
    * @return \DataDriver\DataDriver
    */
-  public function innerJoin($table, $condition): self
+  public function innerJoin($table, ...$condition): self
   {
     if ($condition  instanceof DataDriver) {
-      $condition = $this->__toString();
+      $condition = $this->toString();
       static::$subQuery = "";
+    } else {
+      if (count($condition) > 3) throw new Exception("Expected a maximum of 3 parameters");
+      $this->setCollection([$condition[2]]);
+      $condition[2] = "?";
+      $condition = join(" ", $condition);
     }
 
     $val = (!empty(static::$subQuery)) ? "subQuery" : "query";

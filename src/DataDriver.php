@@ -38,7 +38,10 @@ class DataDriver
     $this->open();
   }
 
-  private function toString()
+  /**
+   * @return string
+   */
+  private function toString(): string
   {
     return static::$subQuery;
   }
@@ -58,6 +61,9 @@ class DataDriver
     }
   }
 
+  /**
+   * @return \DataDriver\DataDriver
+   */
   public function open(): self
   {
     if (!isset(static::$pdo) || static::$pdo === null) {
@@ -126,7 +132,11 @@ class DataDriver
     return $this;
   }
 
-  public function columns(string $columns = null): self
+  /**
+   * @param null|string $columns
+   * @return \DataDriver\DataDriver
+   */
+  public function columns(?string $columns = null): self
   {
     $val = (!empty(static::$subQuery)) ? "subQuery" : "query";
 
@@ -158,7 +168,7 @@ class DataDriver
 
   /**
    * @param null|callable $callback
-   * @return \Illuminate\Support\Collection|void
+   * @return void|\Illuminate\Support\Collection
    */
   public function fetch(?callable $callback = null)
   {
@@ -184,7 +194,7 @@ class DataDriver
 
   /**
    * @param null|callable $callback
-   * @return \Illuminate\Support\Collection|void
+   * @return void|\Illuminate\Support\Collection
    */
   public function execTransaction(?callable $callback = null)
   {
@@ -236,6 +246,10 @@ class DataDriver
   }
 
 
+  /**
+   * @param \IlluminateIlluminate\Support\Collection $collection
+   * @return \Datadriver\DataDriver
+   */
   protected function prepareParam(Collection $collection): self
   {
     $typeVal = [
@@ -260,6 +274,9 @@ class DataDriver
     return $this;
   }
 
+  /**
+   * @return void
+   */
   private function registerMacros(): void
   {
     try {

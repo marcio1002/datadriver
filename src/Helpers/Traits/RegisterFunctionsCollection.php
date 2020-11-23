@@ -18,7 +18,9 @@ trait RegisterFunctionsCollection
     if ($collection->isEmpty()) {
       if (is_array($callback)) {
         [$class, $method] = $callback;
-        $class->$method($collection);
+
+        if(method_exists($class,$method))  $class->$method($collection);
+        
       } else {
         if(!is_callable($callback)) throw new Exception("{$callback} is not a function");
         if($callback instanceof Closure) $callback = $callback->bindTo($collection);
@@ -39,7 +41,9 @@ trait RegisterFunctionsCollection
     if ($collection->isNotEmpty()) {
       if (is_array($callback)) {
         [$class, $method] = $callback;
-        $class->$method($collection);
+
+        if(method_exists($class,$method))  $class->$method($collection);
+
       } else {
         if(!is_callable($callback)) throw new Exception("{$callback} is not a function");
         if($callback instanceof Closure) $callback = $callback->bindTo($collection);
