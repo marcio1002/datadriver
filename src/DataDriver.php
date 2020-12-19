@@ -2,30 +2,26 @@
 
 namespace Datadriver;
 
-use Datadriver\Helpers\Exceptions\MessageException;
-use Datadriver\Helpers\Exceptions\MessageRuntimeException;
-use PDO, PDOException, Exception;
-use Datadriver\Helpers\Traits\{ConnectionDriver, DataClause, DataImplements, RegisterFunctionsCollection};
-use Illuminate\Support\Collection;
+use Datadriver\Helpers\Exceptions\MessageException, Datadriver\Helpers\Exceptions\MessageRuntimeException;
+use PDO, PDOException, Exception, Illuminate\Support\Collection;
+use Datadriver\Helpers\Traits\{ConnectionDriver, DriverClause, ImplementsHelper, InstructionSqlHelper, RegisterFunctionsCollection};
 
 class DataDriver
 {
-  use ConnectionDriver, DataClause, DataImplements, RegisterFunctionsCollection;
-  private static ?PDO $pdo = null;
-  protected static ?Collection $data = null;
-  private static $stmt;
-  private static ?string $query = null;
-  private static ?string $subQuery = null;
-  private static ?string $columns;
-  private static ?string $table;
-  private static $pdoResult = null;
+  use ConnectionDriver, DriverClause, ImplementsHelper, RegisterFunctionsCollection;
+  private ?PDO $pdo = null;
+  private ?InstructionSqlHelper $sql = null;
+  private $stmt = null;
+  private $pdoResult = null;
 
-  public function __construct()
+  public function __construct(bool $msgHandlerErro = true)
   {
     $this->registerMacros();
-    $this->setCollection([]);
-    set_error_handler(fn(...$exception) => (new MessageRuntimeException([$exception]))->sendMessage());
-    set_exception_handler(fn($exception) => (new MessageException($exception))->sendMessage());
+    $this->sql = new InstructionSqlHelper;
+    if ($msgHandlerErro) {
+      set_error_handler(fn (...$exception) => (new MessageRuntimeException($exception))->sendMessage());
+      set_exception_handler(fn ($exception) => (new MessageException($exception))->sendMessage());
+    }
   }
 
   public function __destruct()
@@ -43,7 +39,7 @@ class DataDriver
    */
   private function toString(): string
   {
-    return static::$subQuery;
+    return $this->sql->subQuery;
   }
 
   /**
@@ -52,13 +48,8 @@ class DataDriver
    */
   public function close(): void
   {
-    if (!is_null(static::$pdo)) {
-      static::$pdo = null;
-      static::$data = null;
-      static::$stmt = null;
-      static::$query = null;
-      static::$subQuery = null;
-    }
+    foreach (["pdo", "sql", "stmt"] as $props)
+      if (!is_null($this->$props)) $this->$props = null;
   }
 
   /**
@@ -66,8 +57,8 @@ class DataDriver
    */
   public function open(): self
   {
-    if (!isset(static::$pdo) || static::$pdo === null) {
-      static::$pdo = $this->getConnection();
+    if (!isset($this->pdo) || $this->pdo === null) {
+      $this->pdo = $this->getConnection();
     }
     return $this;
   }
@@ -78,56 +69,51 @@ class DataDriver
    */
   public function select($table)
   {
-    if (!is_array($table) && !is_string($table)) throw new Exception("The " + gettype($table) + " type is not accepted");
-
-    if (is_array($table)) $table  = join(" ", $table);
-
-    $val = (empty(static::$query)) ? "query" : "subQuery";
-
-    static::$$val = "SELECT {columns} FROM $table "; 
+    $table = $this->sql->setAlias($table);
+    $this->sql->select($table);
 
     return $this;
   }
 
   /**
-   * @param string $table
+   * @param array|string $table
    * @param mixed $values
    * @return \DataDriver\DataDriver
    */
-  public function insert(string $table, ...$values): self
+  public function insert($table, ...$values): self
   {
-    $this->setCollection($values);
+    $table = $this->sql->setAlias($table);
 
-    $val = (empty(static::$query)) ? "query" : "subQuery";
+    $this->sql->setValues($values);
 
-    static::$$val = "INSERT INTO $table ({columns}) VALUES({vals}) ";
+    $this->sql->insert($table);
     return $this;
   }
 
   /**
-   * @param string $table
+   * @param array|string $table
    * @param mixed $values
    * @return \DataDriver\DataDriver
    */
-  public function update(string $table, ...$values): self
+  public function update($table, ...$values): self
   {
-    $this->setCollection($values);
+    $table = $this->sql->setAlias($table);
 
-    $val = (empty(static::$query)) ? "query" : "subQuery";
+    $this->sql->setValues($values);
 
-    static::$$val = "UPDATE $table SET {updateColumns} ";
+    $this->sql->update($table);
     return $this;
   }
 
   /**
-   * @param string $table
+   * @param array|string $table
    * @return \DataDriver\DataDriver
    */
-  public function delete(string $table): self
+  public function delete($table): self
   {
-    $val = (empty(static::$query)) ? "query" : "subQuery";
+    $table = $this->sql->setAlias($table);
 
-    static::$$val = "DELETE FROM $table ";
+    $this->sql->delete($table);
 
     return $this;
   }
@@ -138,31 +124,7 @@ class DataDriver
    */
   public function columns(?string $columns = null): self
   {
-    $val = (!empty(static::$subQuery)) ? "subQuery" : "query";
-
-    if (preg_match("/({vals}|{updateColumns})/", static::$$val)) {
-      if (empty($columns)) throw new Exception("The insert and update statement requires the names of the column (s).");
-    }
-
-    if (empty($columns)) static::$$val = preg_replace("/{columns}/", "*", static::$$val);
-
-    static::$columns = preg_quote($columns, "/ ");
-
-    if (preg_match("/{vals}/", static::$$val)) {
-      $columnsArray = explode(",", $columns);
-      $preValue = join(",", array_fill(0, count($columnsArray), "?"));
-      static::$$val = preg_replace("/{vals}/", $preValue, static::$$val);
-    }
-
-    if (preg_match("/{updateColumns}/", static::$$val)) {
-      foreach (explode(",", $columns) as $k => $v) {
-        $preColumns[$k] = "{$v} = ?";
-      }
-      static::$$val = preg_replace("/{updateColumns}/", join(", ", $preColumns), static::$$val);
-    }
-
-    static::$$val = preg_replace("/{columns}/", $columns, static::$$val);
-
+    $this->sql->columns($columns);
     return $this;
   }
 
@@ -175,16 +137,16 @@ class DataDriver
     try {
       $this->open();
 
-      static::$stmt = static::$pdo->prepare(static::$query);
-      static::$data->ifHave([$this, "prepareParam"]);
-      static::$stmt->execute();
+      $this->stmt = $this->pdo->prepare($this->sql->query);
+      $this->data->ifHave([$this, "prepareParam"]);
+      $this->stmt->execute();
 
-      static::$pdoResult  = (static::$stmt->rowCount() === 1) ? collect(static::$stmt->fetch(PDO::FETCH_ASSOC)) : collect(static::$stmt->fetchAll());
+      $this->pdoResult  = ($this->stmt->rowCount() === 1) ? collect($this->stmt->fetch(PDO::FETCH_ASSOC)) : collect($this->stmt->fetchAll());
 
       if (!empty($callback) && is_callable($callback))
-        $callback(static::$pdoResult);
+        $callback($this->pdoResult);
       else
-        return static::$pdoResult;
+        return $this->pdoResult;
     } catch (Exception | PDOException $ex) {
       throw $ex;
     } finally {
@@ -201,23 +163,23 @@ class DataDriver
     try {
       $this->open();
 
-      static::$stmt = static::$pdo->prepare(static::$query);
-      static::$data->ifHave([$this, "prepareParam"]);
+      $this->stmt = $this->pdo->prepare($this->sql->query);
+      $this->sql->call("ifHave", [$this, "prepareParam"]);
 
-      static::$pdo->beginTransaction();
+      $this->pdo->beginTransaction();
 
-      static::$stmt->execute();
+      $this->stmt->execute();
 
-      static::$pdo->commit();
+      $this->pdo->commit();
 
-      static::$pdoResult  = (static::$stmt->rowCount() === 1) ? collect(static::$stmt->fetch(PDO::FETCH_ASSOC)) : collect(static::$stmt->fetchAll());
+      $this->pdoResult  = ($this->stmt->rowCount() === 1) ? collect($this->stmt->fetch(PDO::FETCH_ASSOC)) : collect($this->stmt->fetchAll());
 
       if (!empty($callback) && is_callable($callback))
-        $callback(static::$pdoResult);
+        $callback($this->pdoResult);
       else
-        return static::$pdoResult;
+        return $this->pdoResult;
     } catch (Exception | PDOException $ex) {
-      static::$pdo->rollBack();
+      $this->pdo->rollBack();
       throw $ex;
     } finally {
       $this->close();
@@ -233,11 +195,11 @@ class DataDriver
     try {
       $this->open();
 
-      static::$stmt = static::$pdo->prepare(static::$query);
+      $this->stmt = $this->pdo->prepare($this->sql->query);
 
-      static::$data->ifHave([$this, "prepareParam"]);
-      static::$stmt->execute();
-      return (static::$stmt->rowCount() > 0) ? true : false;
+      $this->data->ifHave([$this, "prepareParam"]);
+      $this->stmt->execute();
+      return ($this->stmt->rowCount() > 0) ? true : false;
     } catch (Exception | PDOException $ex) {
       throw $ex;
     } finally {
@@ -264,8 +226,8 @@ class DataDriver
         ->each(function ($vals, $in) use ($typeVal) {
           $in += 1;
           (isset($typeVal[gettype($vals)])) ?
-            static::$stmt->bindParam($in, $vals, $typeVal[gettype($vals)]) :
-            static::$stmt->bindParam($in, $vals);
+            $this->stmt->bindParam($in, $vals, $typeVal[gettype($vals)]) :
+            $this->stmt->bindParam($in, $vals);
         });
     } catch (Exception $ex) {
       throw $ex;
@@ -280,13 +242,10 @@ class DataDriver
   private function registerMacros(): void
   {
     try {
-      $RegisterFunctions = RegisterFunctionsCollection::class;
+      $registerFunctions = RegisterFunctionsCollection::class;
       $datadriver = $this;
-      foreach (get_class_methods($RegisterFunctions) as $funcName) {
-        Collection::macro($funcName, function (...$value) use ($datadriver, $funcName) {
-          return $datadriver->$funcName($this, ...$value);
-        });
-      }
+      foreach (get_class_methods($registerFunctions) as $funcName)
+        Collection::macro($funcName, fn (...$value) => $datadriver->$funcName($this, ...$value));
     } catch (Exception $ex) {
       throw $ex;
     }

@@ -16,7 +16,7 @@ trait ConnectionDriver
         DB_CONFIG["OPTIONS"]
       );
     } catch (Exception | PDOException $ex) {
-      exit($ex->getMessage());
+      throw $ex;
     }
   }
 }

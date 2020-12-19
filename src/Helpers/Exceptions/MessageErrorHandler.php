@@ -2,12 +2,12 @@
 
 namespace Datadriver\Helpers\Exceptions;
 
-use Datadriver\Helpers\Traits\{DataImplements, DomHelper};
+use Datadriver\Helpers\Traits\{ImplementsHelper, DomHelper};
 use DOMDocument, DOMElement;
 
 trait MessageErrorHandler
 {
-  use DomHelper, DataImplements;
+  use DomHelper, ImplementsHelper;
 
   private static ?DOMDocument $doc = null;
   private static ?DOMElement $head = null;
@@ -39,7 +39,7 @@ trait MessageErrorHandler
     static::$head = static::$doc->createElement("head");
     static::$head = $html->appendChild(static::$head);
 
-    static::$head->appendChild(static::$doc->createElement("title", "Error exception thrown"));
+    static::$head->appendChild(static::$doc->createElement("title", "Error thrown"));
 
     $this->createElementMeta(["charset" => "UTF-8"]);
     $this->createElementMeta(["name" => "viewport", "content" => "width=device-width, initial-scale=1.0"]);

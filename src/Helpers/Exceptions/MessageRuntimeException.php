@@ -10,7 +10,7 @@ class MessageRuntimeException {
 
   public function __construct($ex)
   {
-    static::$ex = $ex[0];
+    static::$ex = $ex;
   }
 
   public function sendMessage()
