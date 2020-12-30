@@ -2,7 +2,7 @@
     "name": "marcio1002/datadriver",
     "description": "Um componente simples para implementação de conexões com drivers SGBD",
     "type": "composer-plugin",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "license": "Aladdin",
     "authors": [
         {

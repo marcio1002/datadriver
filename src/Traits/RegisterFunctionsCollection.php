@@ -1,6 +1,6 @@
 <?php
 
-namespace Datadriver\Helpers\Traits;
+namespace Datadriver\Traits;
 
 use Closure, Exception, Illuminate\Support\Collection;
 
@@ -57,7 +57,7 @@ trait RegisterFunctionsCollection
   public function toObject(Collection $collection): Object
   {
     $object = new class{};
-    
+
     $collection->each(fn ($item, $in) => ($object->{$in} = $item));
     return $object;
   }
@@ -69,26 +69,25 @@ trait RegisterFunctionsCollection
    * @param bool $recursive
    * @return object
    */
-  public function ppendKey(Collection $collection, string $key, $value, bool $recursive = false): Collection
+  public function prependKey(Collection $collection, string $key, $value, bool $recursive = false): Collection
   {
-    $items = $collection->toArray();
 
-    if (is_null($items) && $recursive)
-      $items = $value;
+    if (is_null($items = $collection->toArray()))
+          $items = $value;
 
-    if ($recursive && is_array($items))
-      foreach ($items as $k => $it) {
-        if (isset($items[$k][$key])) {
-          if (!is_array($items[$k][$key])) $items[$k][$key] = [$it[$key]];
-          array_unshift($items[$k][$key], $value);
+    if (is_array($items))
+      if ($recursive)
+        foreach ($items as $k => $it) {
+          if (!is_array($items[$k])) $items[$k] = [$it];
+          array_unshift($items[$k], [$value]);
         }
+      else {
+        if (!is_array($items[$key])) $items[$key] = [$items[$key]];
+        array_unshift($items[$key], $value);
       }
-    else {
-      if (!is_array($items[$key])) $items[$key] = [$items[$key]];
-      array_unshift($items[$key], $value);
-    }
 
-    return collect($items);
+
+    return $collection->put($key, $items[$key]);
   }
 
   /**
@@ -104,16 +103,18 @@ trait RegisterFunctionsCollection
       $collection->put($key, "");
 
     foreach ($collection->toArray() as $k => $v) {
-      if (($k <=> $key) == 0) 
+      if (($k <=> $key) == 0)
         if (!$recursive) {
           if (is_array($v))
             array_push($v, $value);
           else
-           $v = (empty($v)) ?  $value : [$v, $value];
+            $v = (empty($v)) ?  $value : [$v, $value];
 
           $items = $v;
-        }else 
-          $items[] = [$key => $value];
+        } else {
+          if (!empty($v)) $items = $v;
+          $items[] = [$value];
+        }
     }
     $collection->put($key, $items);
 

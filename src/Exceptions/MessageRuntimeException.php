@@ -1,6 +1,6 @@
 <?php
 
-namespace Datadriver\Helpers\Exceptions;
+namespace Datadriver\Exceptions;
 
 class MessageRuntimeException {
 
@@ -11,9 +11,10 @@ class MessageRuntimeException {
   public function __construct($ex)
   {
     static::$ex = $ex;
+    $this->sendMessage();
   }
 
-  public function sendMessage()
+  private function sendMessage()
   {
     echo $this
       ->createHead()

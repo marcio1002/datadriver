@@ -2,25 +2,30 @@
 
 namespace Datadriver;
 
-use Datadriver\Helpers\Exceptions\MessageException, Datadriver\Helpers\Exceptions\MessageRuntimeException;
-use PDO, PDOException, Exception, Illuminate\Support\Collection;
-use Datadriver\Helpers\Traits\{ConnectionDriver, DriverClause, ImplementsHelper, InstructionSqlHelper, RegisterFunctionsCollection};
+use PDO, PDOException, Exception, Illuminate\Support\Collection, Datadriver\Helpers\ImplementsHelper;
+use Datadriver\Traits\{ConnectionDriver, DriverClause, InstructionSql, RegisterFunctionsCollection};
+use Datadriver\Exceptions\{MessageException, MessageRuntimeException};
 
 class DataDriver
 {
-  use ConnectionDriver, DriverClause, ImplementsHelper, RegisterFunctionsCollection;
+  use 
+  ConnectionDriver, 
+  DriverClause, 
+  InstructionSql,
+  RegisterFunctionsCollection;
+
   private ?PDO $pdo = null;
-  private ?InstructionSqlHelper $sql = null;
   private $stmt = null;
   private $pdoResult = null;
 
   public function __construct(bool $msgHandlerErro = true)
   {
+    $this->__init();
     $this->registerMacros();
-    $this->sql = new InstructionSqlHelper;
+
     if ($msgHandlerErro) {
-      set_error_handler(fn (...$exception) => (new MessageRuntimeException($exception))->sendMessage());
-      set_exception_handler(fn ($exception) => (new MessageException($exception))->sendMessage());
+      set_error_handler(fn (...$exception) => (new MessageRuntimeException($exception)));
+      set_exception_handler(fn ($exception) => (new MessageException($exception)));
     }
   }
 
@@ -34,12 +39,9 @@ class DataDriver
     $this->open();
   }
 
-  /**
-   * @return string
-   */
-  private function toString(): string
+  public function __toString()
   {
-    return $this->sql->subQuery;
+    return $this->get("query") ?? DataDriver::class;
   }
 
   /**
@@ -48,7 +50,7 @@ class DataDriver
    */
   public function close(): void
   {
-    foreach (["pdo", "sql", "stmt"] as $props)
+    foreach (["pdo", "stmt"] as $props)
       if (!is_null($this->$props)) $this->$props = null;
   }
 
@@ -57,74 +59,9 @@ class DataDriver
    */
   public function open(): self
   {
-    if (!isset($this->pdo) || $this->pdo === null) {
+    if (!isset($this->pdo) || is_null($this->pdo)) {
       $this->pdo = $this->getConnection();
     }
-    return $this;
-  }
-
-  /**
-   * @param array|string $table
-   * @return \DataDriver\DataDriver
-   */
-  public function select($table)
-  {
-    $table = $this->sql->setAlias($table);
-    $this->sql->select($table);
-
-    return $this;
-  }
-
-  /**
-   * @param array|string $table
-   * @param mixed $values
-   * @return \DataDriver\DataDriver
-   */
-  public function insert($table, ...$values): self
-  {
-    $table = $this->sql->setAlias($table);
-
-    $this->sql->setValues($values);
-
-    $this->sql->insert($table);
-    return $this;
-  }
-
-  /**
-   * @param array|string $table
-   * @param mixed $values
-   * @return \DataDriver\DataDriver
-   */
-  public function update($table, ...$values): self
-  {
-    $table = $this->sql->setAlias($table);
-
-    $this->sql->setValues($values);
-
-    $this->sql->update($table);
-    return $this;
-  }
-
-  /**
-   * @param array|string $table
-   * @return \DataDriver\DataDriver
-   */
-  public function delete($table): self
-  {
-    $table = $this->sql->setAlias($table);
-
-    $this->sql->delete($table);
-
-    return $this;
-  }
-
-  /**
-   * @param null|string $columns
-   * @return \DataDriver\DataDriver
-   */
-  public function columns(?string $columns = null): self
-  {
-    $this->sql->columns($columns);
     return $this;
   }
 
@@ -164,7 +101,7 @@ class DataDriver
       $this->open();
 
       $this->stmt = $this->pdo->prepare($this->sql->query);
-      $this->sql->call("ifHave", [$this, "prepareParam"]);
+      $this->sql->method("ifHave", [$this, "prepareParam"]);
 
       $this->pdo->beginTransaction();
 
@@ -214,18 +151,17 @@ class DataDriver
    */
   protected function prepareParam(Collection $collection): self
   {
-    $typeVal = [
-      "string" => PDO::PARAM_STR,
-      "integer" => PDO::PARAM_INT,
-      "boolean" => PDO::PARAM_BOOL,
-      "null" => PDO::PARAM_NULL,
-    ];
-
     try {
+      $typeVal = [
+        "string" => PDO::PARAM_STR,
+        "integer" => PDO::PARAM_INT,
+        "boolean" => PDO::PARAM_BOOL,
+        "null" => PDO::PARAM_NULL,
+      ];
       $collection
         ->each(function ($vals, $in) use ($typeVal) {
           $in += 1;
-          (isset($typeVal[gettype($vals)])) ?
+          isset($typeVal[gettype($vals)]) ?
             $this->stmt->bindParam($in, $vals, $typeVal[gettype($vals)]) :
             $this->stmt->bindParam($in, $vals);
         });
@@ -241,13 +177,8 @@ class DataDriver
    */
   private function registerMacros(): void
   {
-    try {
-      $registerFunctions = RegisterFunctionsCollection::class;
-      $datadriver = $this;
-      foreach (get_class_methods($registerFunctions) as $funcName)
-        Collection::macro($funcName, fn (...$value) => $datadriver->$funcName($this, ...$value));
-    } catch (Exception $ex) {
-      throw $ex;
-    }
+    $datadriver = $this;
+    foreach (get_class_methods(RegisterFunctionsCollection::class) as $funcName)
+      Collection::macro($funcName, fn (...$value) => $datadriver->$funcName($this, ...$value));
   }
 }

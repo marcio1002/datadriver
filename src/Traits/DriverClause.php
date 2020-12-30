@@ -1,8 +1,8 @@
 <?php
 
-namespace Datadriver\Helpers\Traits;
+namespace Datadriver\Traits;
 
-use Datadriver\DataDriver, Exception;
+use Exception;
 
 trait DriverClause
 {
@@ -18,11 +18,11 @@ trait DriverClause
    */
   public function where(string $column, string $operator, $values): self
   {
-    $prop = (is_null($this->sql->subQuery)) ? "query" : "subQuery";
+    $prop = $this->getQueryOrSubquery("subQuery");
 
-    $this->sql
+    $this
       ->setValues([$values])
-      ->getClause(!stripos($this->sql->$prop, "WHERE") ? "where" : "and")
+      ->getClause(!stripos($this->get($prop), "WHERE") ? "where" : "and")
       ->appendArgs("$column $operator ?");
 
     return $this;
@@ -35,19 +35,20 @@ trait DriverClause
    */
   public function whereIn($column, ...$values): self
   {
-    if ($values[0] = $this->sql->isInstanceofDatadriver($values)) {
-      $this->sql
+    if ($values[0] = $this->isInstanceofDatadriver($values)) {
+      $this
         ->getClause("in")
         ->appendArgs($column)
         ->appendValues(join(",", $values));
-    } else {
-      $values = array_fill(0, count($values), "?");
 
-      $this->sql
+    } else {
+      $preValues = array_fill(0, count($values), "?");
+
+      $this
         ->setValues($values)
         ->getClause("in")
         ->appendArgs($column)
-        ->appendValues(join(",", $values));
+        ->appendValues(join(",", $preValues));
     }
 
     return $this;
@@ -60,22 +61,21 @@ trait DriverClause
    */
   public function whereNotIn(string $column, ...$values): self
   {
-    if ($values[0]  instanceof DataDriver) {
-      $values[0] = $this->toString();
+    if ($values[0] = $this->isInstanceofDatadriver($values)) {
+      $this
+        ->getClause("notIn")
+        ->appendArgs($column)
+        ->appendValues(join(",", $values));
+
     } else {
-      $this->setCollection($values);
-      $values = array_fill(0, count($values), "?");
+      $preValues = array_fill(0, count($values), "?");
+
+      $this
+        ->setValues($values)
+        ->getClause("notIn")
+        ->appendArgs($column)
+        ->appendValues(join(",", $preValues));
     }
-
-    $val = (!empty($this->subQuery)) ? "subQuery" : "query";
-
-    $values = join(",", $values);
-
-    if (stripos($this->$val, "WHERE"))
-      $this->val .= " AND $column  NOT IN ($values)";
-    else
-      $this->val .= " WHERE $column NOT IN ($values)";
-    return $this;
 
     return $this;
   }
@@ -152,9 +152,9 @@ trait DriverClause
   public function orderBy($columns, string $orderBy = "ASC"): self
   {
     if (!is_array($columns) && !is_string($columns) && !is_int($columns)) throw new Exception("The " + gettype($columns) + " type is not accepted");
-    if (is_array($columns)) $columns = join(",", $columns);
+    if (is_array($columns)) $columns = join(", ", $columns);
 
-    $this->sql
+    $this
       ->getClause("order")
       ->appendArgs($columns, $orderBy);
 
@@ -168,12 +168,10 @@ trait DriverClause
    */
   public function limit(int $row_count, int $offset = 0): self
   {
-    $val = (!empty($this->subQuery)) ? "subQuery" : "query";
+    $this
+      ->getClause("limit")
+      ->appendArgs($row_count, $offset);
 
-    $this->val .= "LIMIT $row_count ";
-    if ($offset !== 0) {
-      $this->val .= "OFFSET $offset";
-    }
     return $this;
   }
 }

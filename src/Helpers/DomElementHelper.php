@@ -1,10 +1,10 @@
 <?php
 
-namespace Datadriver\Helpers\Traits;
+namespace Datadriver\Helpers;
 
 use DOMAttr;
 
-trait DomHelper
+trait DomElementHelper
 {
 
   protected function createElementLink(string $type, string $url): void

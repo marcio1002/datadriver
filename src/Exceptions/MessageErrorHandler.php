@@ -1,13 +1,13 @@
 <?php
 
-namespace Datadriver\Helpers\Exceptions;
+namespace Datadriver\Exceptions;
 
-use Datadriver\Helpers\Traits\{ImplementsHelper, DomHelper};
 use DOMDocument, DOMElement;
+use Datadriver\Helpers\{ImplementsHelper, DomElementHelper};
 
 trait MessageErrorHandler
 {
-  use DomHelper, ImplementsHelper;
+  use DomElementHelper, ImplementsHelper;
 
   private static ?DOMDocument $doc = null;
   private static ?DOMElement $head = null;
