@@ -18,13 +18,10 @@ trait InstructionSql
    */
   public function insert($table, ...$values): self
   {
-    $this->setValues($values);
-    $table = $this->setAlias($table);
-
-    $prop = $this->getQueryOrSubquery("query");
-
-
-    $this->set($prop, "INSERT INTO $table ({columns}) VALUES({insertValues}) ");
+    $this
+      ->setValues($values)
+      ->syntax("insert")
+      ->setIntruction($this->setAlias($table));
 
     return $this;
   }
@@ -36,7 +33,7 @@ trait InstructionSql
   public function select($table): self
   {
     $this
-      ->getClause("select")
+      ->syntax("select")
       ->setInstruction($this->setAlias($table));
 
     return $this;
@@ -49,10 +46,9 @@ trait InstructionSql
    */
   public function update($table, ...$values): self
   {
-    $this->setValues($values);
-
     $this
-      ->getClause("update")
+      ->setValues($values)
+      ->syntax("update")
       ->setInstruction($this->setAlias($table));
 
     return $this;
@@ -65,7 +61,7 @@ trait InstructionSql
   public function delete(string $table): self
   {
     $this
-      ->getClause("delete")
+      ->syntax("delete")
       ->setInstruction($this->setAlias($table));
 
     return $this;
@@ -79,31 +75,27 @@ trait InstructionSql
   {
     $prop = $this->getQueryOrSubquery("subQuery");
 
-    if (preg_match("/({insertValues}|{updateColumns})/", $this->get($prop))) {
-      if (empty($columns)) throw new LengthException("The insert and update statement requires the names of the column (s).");
+    if (preg_match("/({insertValues}|{updateColumns})/", $this->method("get", $prop))) {
+      if (empty($columns)) throw new LengthException("The instruction insert and update statement requires the names of the column(s).");
     }
 
-    $columns = preg_quote($columns, "/ ");
+    if (empty($columns)) 
+      $this->method("put", $prop, preg_replace("/{columns}/", "*", $this->method("get", $prop)));
+     else 
+      $this->method("put", $prop, preg_replace("/{columns}/", $columns, $this->method("get", $prop)));
+    
 
-
-    if (empty($columns)) {
-      $replaceQuery = preg_replace("/{columns}/", "*", $this->get($prop));
-      $this->method("put", $prop, $replaceQuery);
-    } else {
-      $this->method("put", $prop, preg_replace("/{columns}/", $columns, $this->get($prop)));
-    }
-
-    if (preg_match("/{insertValues}/", $this->get($prop))) {
+    if (preg_match("/{insertValues}/", $this->method("get", $prop))) {
       $columnsArray = explode(",", $columns);
       $preValue = join(", ", array_fill(0, count($columnsArray), "?"));
-      $this->method("put", $prop, preg_replace("/{insertValues}/", $preValue, $this->get($prop)));
+      $this->method("put", $prop, preg_replace("/{insertValues}/", $preValue, $this->method("get", $prop)));
     }
 
-    if (preg_match("/{updateColumns}/", $this->get($prop))) {
-      foreach (explode(",", $columns) as $k => $v)
+    if (preg_match("/{updateColumns}/", $this->method("get", $prop))) {
+      foreach (explode(",", $columns) ?? [] as $k => $v)
         $preColumns[$k] = "{$v} = ?";
 
-      $this->method("put", $prop, preg_replace("/{updateColumns}/", join(", ", $preColumns), $this->get($prop)));
+      $this->method("put", $prop, preg_replace("/{updateColumns}/", join(", ", $preColumns), $this->method("get", $prop)));
     }
 
     return $this;

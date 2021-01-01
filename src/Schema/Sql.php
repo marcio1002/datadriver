@@ -43,7 +43,7 @@ class Sql
     $replace = "";
     foreach (preg_split("/\s/", $clause) as $v) {
       if (preg_match("/$strSearch/", $v) && $c === 0) {
-        $replace .= preg_replace("/$strSearch/", "$value ", $v);
+        $replace .= preg_replace("/$strSearch/", " $value ", $v);
         $c += 1;
       } else
         $replace .= "$v ";
@@ -56,12 +56,12 @@ class Sql
     $clause = preg_quote($clause);
 
     if (preg_match("/($clause)\s*$/", $query))
-      $replaceQuery = preg_replace("/($clause)\s*$/", "$replace ", $query);
+      $replaceQuery = preg_replace("/($clause)\s*$/", " $replace ", $query);
     else
       $replaceQuery = "$query $replace ";
 
 
-    $this->collection->put($prop, $replaceQuery);
+    $this->collection->put($prop, trim($replaceQuery));
 
     $this->collection->put($this->clause, trim($replace));
   }

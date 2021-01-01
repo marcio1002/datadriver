@@ -18,11 +18,6 @@ trait ImplementsHelper
     if (!(static::$collect instanceof Collection)) static::$collect = collect();
   }
 
-  protected function get(string $key)
-  {
-    return static::$collect->get($key);
-  }
-
   protected function method(string $name, ...$arguments)
   {
     return static::$collect->$name(...$arguments);
@@ -30,7 +25,7 @@ trait ImplementsHelper
 
   protected function getQueryOrSubquery(string $str): string
   {
-    return (is_null($this->get($str))) ? "query" : "subQuery";
+    return (is_null(static::$collect->get($str))) ? "query" : "subQuery";
   }
 
   protected function setValues(array $mixed): self
@@ -44,11 +39,6 @@ trait ImplementsHelper
     return $this;
   }
 
-  /**
-   * @param object $object
-   *  The object to be converted
-   * @return array
-   */
   protected function toArray(object $object): array
   {
     $classAnonymous = new class{};
@@ -69,20 +59,21 @@ trait ImplementsHelper
   {
     if (!is_array($value) && !is_string($value)) throw new InvalidArgumentException("The " + gettype($value) + " type is not accepted");
 
-    return (is_array($value)) ? join(" ", $value) : $value;
+    $driver = (strtolower(DB_CONFIG["DRIVE"]) <=> "sqlite") === 0 ? " AS " : " ";
+
+    return (is_array($value)) ? join($driver, $value) : $value;
   }
 
   /**
    * @param string $clause
-   * @return null|object
+   * @return null|\Datadriver\Schema\Sql
    */
-  protected function getClause(string $clause): ?object
+  protected function syntax(string $clause): ?\Datadriver\Schema\Sql
   {
     return 
     (new SqlFactory)
       ->create("mysql")
       ->addParams(static::$collect, $clause);
-
   }
 
   /**
@@ -92,9 +83,9 @@ trait ImplementsHelper
   public function isInstanceofDatadriver($var): ?string
   {
     if (is_array($var) && collect($var)->contains(fn ($v) => ($v instanceof DataDriver)))
-      $subQuery = $this->get("subQuery");
+      $subQuery = static::$collect->get("subQuery");
     elseif ($var instanceof DataDriver)
-      $subQuery = $this->get("subQuery");
+      $subQuery = static::$collect->get("subQuery");
 
     $this->method("put","subQuery", null);
 

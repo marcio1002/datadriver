@@ -22,9 +22,9 @@ class SqlFactory
 
   /**
    * @param mixed $params
-   * @return null|object
+   * @return null|\Datadriver\Schema\Sql
    */
-  public function addParams(...$params)
+  public function addParams(...$params): ?\Datadriver\Schema\Sql
   {
     return (class_exists($this->class)) ? new $this->class(...$params) : null;
   }

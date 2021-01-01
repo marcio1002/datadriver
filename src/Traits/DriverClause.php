@@ -2,7 +2,7 @@
 
 namespace Datadriver\Traits;
 
-use Exception;
+use Exception, LogicException;
 
 trait DriverClause
 {
@@ -18,11 +18,58 @@ trait DriverClause
    */
   public function where(string $column, string $operator, $values): self
   {
-    $prop = $this->getQueryOrSubquery("subQuery");
 
     $this
       ->setValues([$values])
-      ->getClause(!stripos($this->get($prop), "WHERE") ? "where" : "and")
+      ->syntax("where")
+      ->appendArgs("$column $operator ?");
+
+    return $this;
+  }
+
+  /**
+   * @param string $column
+   * @param string $operator
+   * @param mixed $values
+   * @return \DataDriver\DataDriver
+   */
+  public function having(string $column, string $operator, $values): self
+  {
+    $this
+      ->setValues([$values])
+      ->syntax("having")
+      ->appendArgs("$column $operator ?");
+
+    return $this;
+  }
+
+  /**
+   * @param string $column
+   * @param string $operator
+   * @param mixed $values
+   * @return \DataDriver\DataDriver
+   */
+  public function and(string $column, string $operator, $values): self
+  {
+    $this
+      ->setValues([$values])
+      ->syntax("and")
+      ->appendArgs("$column $operator ?");
+
+    return $this;
+  }
+
+  /**
+   * @param string $column
+   * @param string $operator
+   * @param mixed $values
+   * @return \DataDriver\DataDriver
+   */
+  public function or(string $column, string $operator, $values): self
+  {
+    $this
+      ->setValues([$values])
+      ->syntax("or")
       ->appendArgs("$column $operator ?");
 
     return $this;
@@ -37,7 +84,7 @@ trait DriverClause
   {
     if ($values[0] = $this->isInstanceofDatadriver($values)) {
       $this
-        ->getClause("in")
+        ->syntax("in")
         ->appendArgs($column)
         ->appendValues(join(",", $values));
 
@@ -46,7 +93,7 @@ trait DriverClause
 
       $this
         ->setValues($values)
-        ->getClause("in")
+        ->syntax("in")
         ->appendArgs($column)
         ->appendValues(join(",", $preValues));
     }
@@ -63,84 +110,42 @@ trait DriverClause
   {
     if ($values[0] = $this->isInstanceofDatadriver($values)) {
       $this
-        ->getClause("notIn")
+        ->syntax("notIn")
         ->appendArgs($column)
         ->appendValues(join(",", $values));
 
     } else {
-      $preValues = array_fill(0, count($values), "?");
+      $preValues = join(", ",array_fill(0, count($values), "?"));
 
       $this
         ->setValues($values)
-        ->getClause("notIn")
+        ->syntax("notIn")
         ->appendArgs($column)
-        ->appendValues(join(",", $preValues));
+        ->appendValues($preValues);
     }
-
-    return $this;
-  }
-
-  /**
-   * @param array|\DataDriver\DataDriver $expression
-   * @param array|\DataDriver\DataDriver $expression2
-   * @return \DataDriver\DataDriver
-   */
-  public function whereOr($expression, $expression2): self
-  {
-    if ($expression instanceof DataDriver) {
-      $expression = $this->toString();
-    } else {
-      if (count($expression) > 3) throw new Exception("Expected a maximum of 3 parameters");
-
-      $this->setCollection($expression[2]);
-      $expression[2] = "?";
-      $expression =  join(" ", $expression);
-    }
-
-
-    if ($expression2 instanceof DataDriver) {
-      $expression2 = $this->toString();
-    } else {
-      if (count($expression2) > 3) throw new Exception("Expected a maximum of 3 parameters");
-
-      $this->setCollection([array_pop($expression2)]);
-      $expression2[2] = "?";
-      $expression2 =  join(" ", $expression2);
-    }
-
-
-    $val = (!empty($this->subQuery)) ? "subQuery" : "query";
-
-    if (stripos($this->val, "WHERE"))
-      $this->val .= "AND $expression OR $expression2 ";
-    else
-      $this->val .= "WHERE $expression OR $expression2";
 
     return $this;
   }
 
   /**
    * @param array|string $table
-   * @param array|\DataDriver\DataDriver $condition
+   * @param ...$mixed $condition
    * @return \DataDriver\DataDriver
    */
-  public function innerJoin($table, ...$condition): self
+  public function join($table, ...$condition): self
   {
-    if ($condition  instanceof DataDriver) {
-      $condition = $this->toString();
-    } else {
-      if (count($condition) > 3) throw new Exception("Expected a maximum of 3 parameters");
-      $this->setCollection([$condition[2]]);
-      $condition[2] = "?";
-      $condition = join(" ", $condition);
+    if (count($condition) > 3) throw new LogicException("Expected a maximum of 3 parameters");
+
+    if(isset($condition[3])) {
+      $this->setValue([$condition[3]]);
+      $condition[3] = "?";
     }
 
-    $val = (!empty($this->subQuery)) ? "subQuery" : "query";
+    $this
+      ->syntax("join")
+      ->appendArgs( $this->setAlias($table),  join(" ", $condition) );
 
-    if (!is_array($table) && !is_string($table)) throw new Exception("The " + gettype($table) + " type is not accepted");
-    if (is_array($table)) join(" ", $table);
 
-    $this->val .= "INNER JOIN $table ON $condition";
     return $this;
   }
 
@@ -155,8 +160,21 @@ trait DriverClause
     if (is_array($columns)) $columns = join(", ", $columns);
 
     $this
-      ->getClause("order")
+      ->syntax("order")
       ->appendArgs($columns, $orderBy);
+
+    return $this;
+  }
+
+  /**
+   * @param ...$mixed $columns
+   * @return \Datadriver\DataDriver 
+   */
+  public function groupBy(...$columns): self 
+  {
+    $this
+      ->syntax("group")
+      ->appendArgs(join(", ", $columns));
 
     return $this;
   }
@@ -169,7 +187,7 @@ trait DriverClause
   public function limit(int $row_count, int $offset = 0): self
   {
     $this
-      ->getClause("limit")
+      ->syntax("limit")
       ->appendArgs($row_count, $offset);
 
     return $this;

@@ -2,7 +2,7 @@
 
 namespace Datadriver\Exceptions;
 
-class MessageRuntimeException {
+class MessageError {
 
   use MessageErrorHandler;
 

@@ -4,7 +4,7 @@ namespace Datadriver;
 
 use PDO, PDOException, Exception, Illuminate\Support\Collection, Datadriver\Helpers\ImplementsHelper;
 use Datadriver\Traits\{ConnectionDriver, DriverClause, InstructionSql, RegisterFunctionsCollection};
-use Datadriver\Exceptions\{MessageException, MessageRuntimeException};
+use Datadriver\Exceptions\{MessageException, MessageError};
 
 class DataDriver
 {
@@ -24,7 +24,7 @@ class DataDriver
     $this->registerMacros();
 
     if ($msgHandlerErro) {
-      set_error_handler(fn (...$exception) => (new MessageRuntimeException($exception)));
+      set_error_handler(fn (...$exception) => (new MessageError($exception)));
       set_exception_handler(fn ($exception) => (new MessageException($exception)));
     }
   }
@@ -41,7 +41,7 @@ class DataDriver
 
   public function __toString()
   {
-    return $this->get("query") ?? DataDriver::class;
+    return $this->method("get","query") ?? DataDriver::class;
   }
 
   /**
