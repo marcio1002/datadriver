@@ -25,7 +25,7 @@ trait ImplementsHelper
 
   protected function getQueryOrSubquery(string $str): string
   {
-    return (is_null(static::$collect->get($str))) ? "query" : "subQuery";
+    return (is_null($this->method("get",$str))) ? "query" : "subQuery";
   }
 
   protected function setValues(array $mixed): self
@@ -33,7 +33,7 @@ trait ImplementsHelper
     foreach ($mixed as  $val) {
       if (is_object($val)) $this->setValues($this->toArray($val));
       if (is_array($val)) $this->setValues($val);
-      static::$collect->set("values", $val);
+      $this->method("set","values", $val);
     }
 
     return $this;
@@ -66,13 +66,13 @@ trait ImplementsHelper
 
   /**
    * @param string $clause
-   * @return null|\Datadriver\Schema\Sql
+   * @return null|\Datadriver\Schema\[Mysql,Pgsql,Sqlite]
    */
-  protected function syntax(string $clause): ?\Datadriver\Schema\Sql
+  protected function syntax(string $clause): ?object
   {
     return 
     (new SqlFactory)
-      ->create("mysql")
+      ->create()
       ->addParams(static::$collect, $clause);
   }
 
@@ -83,11 +83,11 @@ trait ImplementsHelper
   public function isInstanceofDatadriver($var): ?string
   {
     if (is_array($var) && collect($var)->contains(fn ($v) => ($v instanceof DataDriver)))
-      $subQuery = static::$collect->get("subQuery");
+      $subQuery = $this->method("get","subQuery");
     elseif ($var instanceof DataDriver)
-      $subQuery = static::$collect->get("subQuery");
+      $subQuery = $this->method("get","subQuery");
 
-    $this->method("put","subQuery", null);
+    $this->method("pull","subQuery");
 
     return $subQuery ?? null;
   }

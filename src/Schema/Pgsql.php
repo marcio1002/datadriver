@@ -2,6 +2,6 @@
 
 namespace Datadriver\Schema;
 
-class Pgsql extends Sql {
-
+class Pgsql {
+  use Sql;
 }

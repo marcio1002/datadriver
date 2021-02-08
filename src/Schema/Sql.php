@@ -4,7 +4,7 @@ namespace Datadriver\Schema;
 
 use Datadriver\DataDriver, Datadriver\Schema\SyntaxSql, Illuminate\Support\Collection;
 
-class Sql
+trait  Sql
 {
   private string $clause;
   private array $sqlSyntax;
@@ -15,6 +15,11 @@ class Sql
     $this->clause = $clause;
     $this->collection = $collection;
     $this->loadSyntax();
+  }
+
+   public function __destruct()
+  {
+    $this->dispatchClause();
   }
 
   private function loadSyntax(): self
@@ -53,17 +58,17 @@ class Sql
       $prop = $this->getQueryOrSubquery("subQuery")
     );
 
-    $clause = preg_quote($clause);
+    $clause = preg_quote(trim($clause));
 
-    if (preg_match("/($clause)\s*$/", $query))
-      $replaceQuery = preg_replace("/($clause)\s*$/", " $replace ", $query);
+    if (preg_match("/($clause)+$/", $query))
+      $replaceQuery = trim(preg_replace("/($clause)+$/", " $replace ", $query));
     else
-      $replaceQuery = "$query $replace ";
+      $replaceQuery = trim("$query $replace ");
 
 
-    $this->collection->put($prop, trim($replaceQuery));
+    $this->collection->put($prop, $replaceQuery);
 
-    $this->collection->put($this->clause, trim($replace));
+    $this->collection->put($this->clause, $replace);
   }
 
   public function setInstruction(string $table): self

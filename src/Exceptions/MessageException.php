@@ -15,16 +15,11 @@ class MessageException
 
   private function sendMessage()
   {
-    echo $this
-      ->createHead()
-      ->createBody()
-      ->setErrorDescription(
+    echo $this->send(
         static::$ex->getMessage(),
         static::$ex->getLine(),
         static::$ex->getFile(),
         static::$ex->getCode()
-      )
-      ->createTable(static::$ex->getTrace())
-      ->render();
+    );
   }
 }

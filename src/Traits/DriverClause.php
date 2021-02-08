@@ -2,7 +2,7 @@
 
 namespace Datadriver\Traits;
 
-use Exception, LogicException;
+use InvalidArgumentException;
 
 trait DriverClause
 {
@@ -76,11 +76,11 @@ trait DriverClause
   }
 
   /**
-   * @param string| $column
+   * @param string $column
    * @param mixed|\DataDriver\DataDriver ...$values
    * @return \DataDriver\DataDriver
    */
-  public function whereIn($column, ...$values): self
+  public function In(string $column, ...$values): self
   {
     if ($values[0] = $this->isInstanceofDatadriver($values)) {
       $this
@@ -95,7 +95,7 @@ trait DriverClause
         ->setValues($values)
         ->syntax("in")
         ->appendArgs($column)
-        ->appendValues(join(",", $preValues));
+        ->appendValues(join(", ", $preValues));
     }
 
     return $this;
@@ -106,7 +106,7 @@ trait DriverClause
    * @param  mixed|\DataDriver\DataDriver ...$values
    * @return \DataDriver\DataDriver
    */
-  public function whereNotIn(string $column, ...$values): self
+  public function notIn(string $column, ...$values): self
   {
     if ($values[0] = $this->isInstanceofDatadriver($values)) {
       $this
@@ -134,11 +134,11 @@ trait DriverClause
    */
   public function join($table, ...$condition): self
   {
-    if (count($condition) > 3) throw new LogicException("Expected a maximum of 3 parameters");
+    if (count($condition) > 3) throw new InvalidArgumentException("Expected a maximum of 3 parameters");
 
-    if(isset($condition[3])) {
-      $this->setValue([$condition[3]]);
-      $condition[3] = "?";
+    if(isset($condition[2])) {
+      $this->setValues([$condition[2]]);
+      $condition[2] = "?";
     }
 
     $this
@@ -156,7 +156,7 @@ trait DriverClause
    */
   public function orderBy($columns, string $orderBy = "ASC"): self
   {
-    if (!is_array($columns) && !is_string($columns) && !is_int($columns)) throw new Exception("The " + gettype($columns) + " type is not accepted");
+    if (!is_array($columns) && !is_string($columns) && !is_int($columns)) throw new InvalidArgumentException("The " + gettype($columns) + " type is not accepted");
     if (is_array($columns)) $columns = join(", ", $columns);
 
     $this

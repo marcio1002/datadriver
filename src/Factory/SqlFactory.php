@@ -9,22 +9,21 @@ class SqlFactory
   private array $sqlClass = ["mysql", "pgsql", "sqlite"];
   private string $class;
 
-  public function create($className): self
+  public function create(): self
   {
+    $className = strtolower(DB_CONFIG["DRIVE"]);
 
-    if (in_array($className, $this->sqlClass)) {
-      $class = "Datadriver\\Schema\\" .  ucfirst($className);
-      $this->class = $class;
-    }
+    if (in_array($className, $this->sqlClass)) 
+      $this->class = "Datadriver\\Schema\\" .  ucfirst($className);
 
     return $this;
   }
 
   /**
    * @param mixed $params
-   * @return null|\Datadriver\Schema\Sql
+   * @return null|\Datadriver\Schema\[Mysql,Pgsql,Sqlite]
    */
-  public function addParams(...$params): ?\Datadriver\Schema\Sql
+  public function addParams(...$params): ?object
   {
     return (class_exists($this->class)) ? new $this->class(...$params) : null;
   }

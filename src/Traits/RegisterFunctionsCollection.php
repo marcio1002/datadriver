@@ -3,6 +3,7 @@
 namespace Datadriver\Traits;
 
 use Closure, Exception, Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 trait RegisterFunctionsCollection
 {
@@ -17,10 +18,16 @@ trait RegisterFunctionsCollection
       if (is_array($callback)) {
         [$class, $method] = $callback;
 
-        if (method_exists($class, $method))  $class->$method($collection);
+        if (!method_exists($class, $method))
+          throw new InvalidArgumentException("{$callback} Method does not exist");
+
+        $class->$method($collection);
       } else {
-        if (!is_callable($callback)) throw new Exception("{$callback} is not a function");
-        if ($callback instanceof Closure) $callback = $callback->bindTo($collection);
+        if (!is_callable($callback))
+          throw new InvalidArgumentException("{$callback} is not a function");
+
+        if ($callback instanceof Closure)
+          $callback = $callback->bindTo($collection);
 
         $callback($collection);
       }
@@ -39,10 +46,16 @@ trait RegisterFunctionsCollection
       if (is_array($callback)) {
         [$class, $method] = $callback;
 
-        if (method_exists($class, $method))  $class->$method($collection);
+        if (!method_exists($class, $method))
+          throw new InvalidArgumentException("{$callback} Method does not exist");
+
+        $class->$method($collection);
       } else {
-        if (!is_callable($callback)) throw new Exception("{$callback} is not a function");
-        if ($callback instanceof Closure) $callback = $callback->bindTo($collection);
+        if (!is_callable($callback))
+          throw new InvalidArgumentException("{$callback} is not a function");
+
+        if ($callback instanceof Closure)
+          $callback = $callback->bindTo($collection);
 
         $callback($collection);
       }
@@ -73,7 +86,7 @@ trait RegisterFunctionsCollection
   {
 
     if (is_null($items = $collection->toArray()))
-          $items = $value;
+      $items = $value;
 
     if (is_array($items))
       if ($recursive)

@@ -9,7 +9,7 @@ trait ConnectionDriver
   protected function getConnection(): \PDO
   {
     try {
-      if((strtolower(DB_CONFIG["DRIVER"] ) <=> "sqlite") === 0) 
+      if((strtolower(DB_CONFIG["DRIVE"] ) <=> "sqlite") === 0) 
         return new PDO("sqlite:" . DB_CONFIG["SQLITE_PATH"]);
       else
         return new PDO(

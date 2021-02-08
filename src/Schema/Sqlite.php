@@ -2,6 +2,6 @@
 
 namespace Datadriver\Schema;
 
-class Sqlite extends Sql {
-  
+class Sqlite {
+  use Sql;
 }

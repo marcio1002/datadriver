@@ -16,10 +16,6 @@ class MessageError {
 
   private function sendMessage()
   {
-    echo $this
-      ->createHead()
-      ->createBody()
-      ->setErrorDescription(static::$ex[1],static::$ex[3],static::$ex[2],static::$ex[0])
-      ->render();
+    echo $this->send(static::$ex[1],static::$ex[3],static::$ex[2],static::$ex[0]);
   }
 }
